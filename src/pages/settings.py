@@ -48,8 +48,15 @@ def _api_keys_tab() -> None:
 
     model_choice = st.selectbox(
         "Mistral Model",
-        ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest", "open-mistral-7b"],
-        help="mistral-large-latest gives best results; open-mistral-7b is free",
+        [
+            "mistral-small-2506",
+            "mistral-small-latest",
+            "mistral-medium-latest",
+            "mistral-large-latest",
+            "open-mistral-7b",
+            "open-mixtral-8x7b",
+        ],
+        help="mistral-small-2506 is free; mistral-large-latest gives best results",
     )
 
     if st.button("💾 Save API Key", type="primary"):

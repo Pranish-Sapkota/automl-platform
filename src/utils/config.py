@@ -33,7 +33,7 @@ class MLConfig(BaseModel):
 
 class MistralConfig(BaseModel):
     """Mistral AI configuration."""
-    model: str = Field(default="mistral-large-latest", description="Mistral model")
+    model: str = Field(default="mistral-small-2506", description="Mistral model")
     max_tokens: int = Field(default=2048, description="Max response tokens")
     temperature: float = Field(default=0.3, description="Generation temperature")
     api_key: Optional[str] = Field(default=None, description="API key from env")
@@ -60,7 +60,7 @@ def get_config() -> AppConfig:
     """Get application configuration with environment overrides."""
     mistral_cfg = MistralConfig(
         api_key=os.environ.get("MISTRAL_API_KEY"),
-        model=os.environ.get("MISTRAL_MODEL", "mistral-large-latest"),
+        model=os.environ.get("MISTRAL_MODEL", "mistral-small-2506"),
     )
     return AppConfig(mistral=mistral_cfg)
 
