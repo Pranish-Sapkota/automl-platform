@@ -49,30 +49,44 @@ def _inject_css() -> None:
     st.markdown(
         """
         <style>
-        /* ── Scrollbar ── */
+        /* ── Theme-Aware Scrollbar ── */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0F1117; }
-        ::-webkit-scrollbar-thumb { background: #6366F1; border-radius: 3px; }
+        ::-webkit-scrollbar-track { background: var(--background-color); }
+        ::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 3px; }
 
-        /* ── Hide Streamlit chrome ── */
+        /* ── Mobile-Safe Header Adjustment ── */
+        /* Keeps the hamburger menu button functional on mobile while removing the default app chrome */
+        [data-testid="stHeader"] {
+            background-color: transparent !important;
+        }
+        [data-testid="stAppDeployButton"] {
+            display: none !important;
+        }
         #MainMenu { visibility: hidden; }
         footer { visibility: hidden; }
-        header { visibility: hidden; }
 
-        /* ── Main container padding ── */
-        .block-container { padding: 1.5rem 2rem 2rem 2rem; max-width: 1400px; }
-
-        /* ── Sidebar ── */
-        [data-testid="stSidebar"] {
-            background: #0D0F1A !important;
-            border-right: 1px solid #1E2030;
+        /* ── Responsive Container Padding ── */
+        .block-container { 
+            padding: 1rem 0.75rem 2rem 0.75rem; 
+            max-width: 1400px; 
+        }
+        @media (min-width: 768px) {
+            .block-container {
+                padding: 1.5rem 2rem 2rem 2rem;
+            }
         }
 
-        /* ── Buttons ── */
+        /* ── Sidebar Custom Styling ── */
+        [data-testid="stSidebar"] {
+            background-color: var(--secondary-background-color) !important;
+            border-right: 1px solid rgba(128, 128, 128, 0.1);
+        }
+
+        /* ── Premium UI Buttons ── */
         .stButton > button {
             border-radius: 8px !important;
             font-weight: 600 !important;
-            transition: all 0.2s ease !important;
+            transition: all 0.2s ease-in-out !important;
         }
         .stButton > button[kind="primary"] {
             background: linear-gradient(135deg, #6366F1, #8B5CF6) !important;
@@ -81,82 +95,89 @@ def _inject_css() -> None:
         }
         .stButton > button:hover {
             transform: translateY(-1px) !important;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4) !important;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35) !important;
         }
 
-        /* ── Tabs ── */
+        /* ── Modern Segmented Tabs ── */
         .stTabs [data-baseweb="tab-list"] {
-            background: #1A1D2E !important;
+            background: var(--secondary-background-color) !important;
             border-radius: 10px !important;
             padding: 4px !important;
-            gap: 2px !important;
+            gap: 4px !important;
+            border: 1px solid rgba(128, 128, 128, 0.15);
         }
         .stTabs [data-baseweb="tab"] {
-            border-radius: 8px !important;
-            color: #64748B !important;
+            border-radius: 6px !important;
+            color: var(--text-color) !important;
+            opacity: 0.7;
             font-weight: 500 !important;
+            padding: 6px 14px !important;
         }
         .stTabs [aria-selected="true"] {
-            background: #6366F1 !important;
+            background: var(--primary-color) !important;
             color: white !important;
+            opacity: 1 !important;
         }
 
-        /* ── Cards ── */
+        /* ── Metric Cards ── */
         [data-testid="stMetric"] {
-            background: #1A1D2E !important;
-            border: 1px solid #2D3748 !important;
+            background: var(--secondary-background-color) !important;
+            border: 1px solid rgba(128, 128, 128, 0.15) !important;
             border-radius: 10px !important;
             padding: 1rem !important;
         }
 
-        /* ── Selectbox, text input ── */
-        .stSelectbox > div, .stTextInput > div {
+        /* ── Input Element Consistency ── */
+        .stSelectbox > div, .stTextInput > div, .stSlider > div {
             border-radius: 8px !important;
         }
 
-        /* ── File uploader ── */
+        /* ── File Uploader Dropzone ── */
         [data-testid="stFileUploadDropzone"] {
-            background: #1A1D2E !important;
-            border: 2px dashed #6366F1 !important;
+            background: var(--secondary-background-color) !important;
+            border: 2px dashed var(--primary-color) !important;
             border-radius: 12px !important;
         }
 
-        /* ── Expander ── */
+        /* ── Expanders ── */
         .streamlit-expanderHeader {
-            background: #1A1D2E !important;
+            background: var(--secondary-background-color) !important;
             border-radius: 8px !important;
+            border: 1px solid rgba(128, 128, 128, 0.15) !important;
         }
 
-        /* ── DataFrame ── */
+        /* ── DataFrames ── */
         [data-testid="stDataFrame"] {
-            border: 1px solid #2D3748 !important;
+            border: 1px solid rgba(128, 128, 128, 0.15) !important;
             border-radius: 8px !important;
         }
 
-        /* ── Chat messages ── */
+        /* ── Chat Interface Bubbles ── */
         [data-testid="stChatMessage"] {
-            background: #1A1D2E !important;
+            background: var(--secondary-background-color) !important;
             border-radius: 12px !important;
-            border: 1px solid #2D3748 !important;
-            padding: 0.5rem !important;
+            border: 1px solid rgba(128, 128, 128, 0.15) !important;
+            padding: 0.75rem !important;
         }
 
-        /* ── Progress bar ── */
+        /* ── Accent-Aligned Progress Bar ── */
         .stProgress > div > div > div {
             background: linear-gradient(90deg, #6366F1, #8B5CF6) !important;
         }
 
-        /* ── Sidebar nav items ── */
+        /* ── Sidebar Built-in Navigation Items ── */
         [data-testid="stSidebarNav"] a {
-            color: #94A3B8 !important;
+            color: var(--text-color) !important;
+            opacity: 0.8;
             border-radius: 8px !important;
             padding: 0.5rem 0.75rem !important;
             font-size: 0.88rem !important;
         }
         [data-testid="stSidebarNav"] a:hover,
         [data-testid="stSidebarNav"] a[aria-current="page"] {
-            background: rgba(99,102,241,0.15) !important;
-            color: #6366F1 !important;
+            background: rgba(99, 102, 241, 0.12) !important;
+            color: var(--primary-color) !important;
+            opacity: 1 !important;
         }
         </style>
         """,
@@ -195,7 +216,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown(
         """
-        <div style="padding:0.5rem 0;color:#475569;font-size:0.7rem">
+        <div style="padding:0.5rem 0; opacity: 0.7; font-size:0.75rem">
             <div>🤖 <b>AutoML Platform</b> v1.0.0</div>
             <div style="margin-top:0.2rem">FLAML · SHAP · Mistral AI</div>
             <div style="margin-top:0.2rem">SQLite · Streamlit Cloud</div>
