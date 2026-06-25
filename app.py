@@ -22,8 +22,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
-        "Get Help": "https://github.com/your-username/automl-platform",
-        "Report a bug": "https://github.com/your-username/automl-platform/issues",
+        "Get Help": "https://github.com/Pranish-Sapkota/automl-platform",
+        "Report a bug": "https://github.com/Pranish-Sapkota/automl-platform/issues",
         "About": "AutoML Platform — Powered by FLAML, SHAP & Mistral AI",
     },
 )
