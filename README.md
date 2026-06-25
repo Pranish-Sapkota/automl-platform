@@ -12,7 +12,7 @@
 [![SHAP](https://img.shields.io/badge/Explainability-SHAP-green)](https://shap.readthedocs.io)
 [![Mistral AI](https://img.shields.io/badge/AI-Mistral-orange)](https://mistral.ai)
 
-[🚀 Live Demo](https://automl-platform.streamlit.app/) · [🐛 Report Bug](https://github.com/your-username/automl-platform/issues) · [💡 Request Feature](https://github.com/your-username/automl-platform/issues)
+[🚀 Live Demo](https://automl-platform.streamlit.app/) · [🐛 Report Bug](https://github.com/Pranish-Sapkota/automl-platform/issues) · [💡 Request Feature](https://github.com/Pranish-Sapkota/automl-platform/issues)
 
 <img width="900" src="https://www.automationml.org/wp-content/uploads/2021/02/AutomationML-Logo.svg" alt="Logo"/>
 
