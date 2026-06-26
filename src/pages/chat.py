@@ -30,12 +30,14 @@ def render() -> None:
         "Ask questions about your dataset and model using Mistral AI.",
     )
 
-    client = MistralClient(api_key=st.session_state.get("mistral_api_key"))
+    # API key is loaded automatically from Streamlit secrets or environment variable.
+    # No manual entry needed — it is set securely in Streamlit Cloud secrets.
+    client = MistralClient()
 
     if not client.is_configured():
         info_box(
-            "Mistral API key not configured. Add it in the <b>Settings</b> page or set "
-            "the <code>MISTRAL_API_KEY</code> environment variable.",
+            "Mistral API key is not configured. Please add <code>MISTRAL_API_KEY</code> "
+            "to your Streamlit Cloud secrets.",
             "warning",
         )
 
@@ -111,7 +113,6 @@ def _handle_message(message: str, client: MistralClient) -> None:
 
         try:
             if client.is_configured():
-                # Stream response
                 for chunk in client.stream_chat(
                     messages=st.session_state["chat_messages"],
                     system_prompt=system_prompt,
@@ -121,8 +122,8 @@ def _handle_message(message: str, client: MistralClient) -> None:
                 response_placeholder.markdown(full_response)
             else:
                 full_response = (
-                    "⚠️ **Mistral API not configured.** Please add your API key in Settings. "
-                    "I can still help you navigate the platform!"
+                    "⚠️ **Mistral API key not set.** "
+                    "Please add `MISTRAL_API_KEY` to Streamlit Cloud secrets."
                 )
                 response_placeholder.markdown(full_response)
         except Exception as exc:
@@ -173,11 +174,7 @@ def _generate_business_insights(client: MistralClient) -> None:
 
     best = result.leaderboard[0]
     top_features = list(
-        sorted(
-            best.metrics.items(),
-            key=lambda x: abs(x[1]),
-            reverse=True,
-        )
+        sorted(best.metrics.items(), key=lambda x: abs(x[1]), reverse=True)
     )[:5]
 
     df_info = _get_df_context()
