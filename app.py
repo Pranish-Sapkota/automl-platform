@@ -22,8 +22,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
-        "Get Help": "https://github.com/Pranish-Sapkota/automl-platform",
-        "Report a bug": "https://github.com/Pranish-Sapkota/automl-platform/issues",
+        "Get Help": "https://github.com/your-username/automl-platform",
+        "Report a bug": "https://github.com/your-username/automl-platform/issues",
         "About": "AutoML Platform — Powered by FLAML, SHAP & Mistral AI",
     },
 )
@@ -31,7 +31,7 @@ st.set_page_config(
 # ── Imports after page config ─────────────────────────────────────────
 from src.storage import init_db
 from src.components import render_sidebar_nav, session_state_summary
-from src.pages import home, upload, profiling, cleaning, training, leaderboard, explainability, chat, export, settings
+from src.pages import home, upload, profiling, cleaning, training, leaderboard, explainability, chat, export
 from src.utils import get_logger
 
 logger = get_logger("app")
@@ -165,7 +165,7 @@ def _inject_css() -> None:
 
 _inject_css()
 
-# ── Navigation ────────────────────────────────────────────────────────
+# ── Navigation (Settings removed) ────────────────────────────────────
 PAGES = {
     "🏠 Home": home,
     "📂 Upload Dataset": upload,
@@ -176,7 +176,6 @@ PAGES = {
     "🔮 Explainability": explainability,
     "💬 AI Chat Assistant": chat,
     "📦 Model Export": export,
-    "⚙️ Settings": settings,
 }
 
 # ── Sidebar ───────────────────────────────────────────────────────────
