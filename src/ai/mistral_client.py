@@ -6,7 +6,10 @@ import urllib.request
 import urllib.error
 from typing import Any, Generator
 
-from src.utils import CONFIG, get_logger
+from src.utils import get_logger
+# NOTE: we import get_config (not CONFIG) so the API key is resolved
+# at MistralClient() instantiation time, after st.secrets is loaded.
+from src.utils.config import get_config
 
 logger = get_logger(__name__)
 
@@ -14,12 +17,12 @@ logger = get_logger(__name__)
 def _detect_sdk_version() -> str:
     """Return 'v1', 'v0', or 'none' based on installed mistralai SDK."""
     try:
-        from mistralai import Mistral  # noqa: F401  # v1.x+
+        from mistralai import Mistral  # noqa: F401
         return "v1"
     except ImportError:
         pass
     try:
-        from mistralai.client import MistralClient  # noqa: F401  # v0.x
+        from mistralai.client import MistralClient  # noqa: F401
         return "v0"
     except ImportError:
         pass
@@ -33,15 +36,28 @@ logger.info("Detected mistralai SDK version: %s", SDK_VERSION)
 class MistralClient:
     """
     Thin wrapper around the Mistral AI API.
-    Supports mistralai v1.x (Mistral class), v0.x (MistralClient class),
-    and a pure-HTTP fallback that needs no SDK at all.
+    Supports mistralai v1.x, v0.x, and a pure-HTTP fallback (no SDK needed).
+
+    API key is resolved fresh on every __init__ call via get_config() so that
+    Streamlit secrets are always available by the time the client is created.
     """
 
     def __init__(self, api_key: str | None = None) -> None:
-        self.api_key = api_key or CONFIG.mistral.api_key
-        self.model = CONFIG.mistral.model
-        self.max_tokens = CONFIG.mistral.max_tokens
-        self.temperature = CONFIG.mistral.temperature
+        # If an explicit key is passed, use it.
+        # Otherwise call get_config() fresh — this reads st.secrets at runtime.
+        if api_key:
+            self.api_key = api_key
+            cfg = get_config()
+            self.model = cfg.mistral.model
+            self.max_tokens = cfg.mistral.max_tokens
+            self.temperature = cfg.mistral.temperature
+        else:
+            cfg = get_config()           # ← fresh call: st.secrets is ready here
+            self.api_key = cfg.mistral.api_key
+            self.model = cfg.mistral.model
+            self.max_tokens = cfg.mistral.max_tokens
+            self.temperature = cfg.mistral.temperature
+
         self._client: Any = None
 
     # ------------------------------------------------------------------
@@ -51,17 +67,12 @@ class MistralClient:
     def _get_client(self) -> Any:
         if self._client is not None:
             return self._client
-
         if SDK_VERSION == "v1":
             from mistralai import Mistral  # type: ignore
             self._client = Mistral(api_key=self.api_key)
         elif SDK_VERSION == "v0":
             from mistralai.client import MistralClient as _Old  # type: ignore
             self._client = _Old(api_key=self.api_key)
-        else:
-            # No SDK — we use the HTTP fallback directly
-            self._client = None
-
         return self._client
 
     def is_configured(self) -> bool:
@@ -76,11 +87,10 @@ class MistralClient:
         messages: list[dict[str, str]],
         system_prompt: str | None = None,
     ) -> str:
-        """Send a chat request and return the full response text."""
         if not self.is_configured():
             return (
                 "⚠️ **Mistral API key not configured.**\n\n"
-                "Add your `MISTRAL_API_KEY` in the Settings page or as an environment variable."
+                "Please add `MISTRAL_API_KEY` to your Streamlit Cloud secrets."
             )
 
         all_messages: list[dict[str, str]] = []
@@ -124,7 +134,7 @@ class MistralClient:
         return response.choices[0].message.content or ""
 
     def _chat_http(self, messages: list[dict]) -> str:
-        """Pure urllib fallback — no SDK needed."""
+        """Pure urllib fallback — zero SDK dependency."""
         payload = json.dumps({
             "model": self.model,
             "messages": messages,
@@ -155,11 +165,10 @@ class MistralClient:
         messages: list[dict[str, str]],
         system_prompt: str | None = None,
     ) -> Generator[str, None, None]:
-        """Stream chat tokens. Falls back to non-streaming if streaming unavailable."""
         if not self.is_configured():
             yield (
                 "⚠️ **Mistral API key not configured.**\n\n"
-                "Please add your `MISTRAL_API_KEY` in the Settings page."
+                "Please add `MISTRAL_API_KEY` to your Streamlit Cloud secrets."
             )
             return
 
@@ -177,10 +186,8 @@ class MistralClient:
                 yield from self._stream_http(all_messages)
         except Exception as exc:
             logger.error("Mistral streaming error: %s", exc)
-            # Graceful degradation: try non-streaming HTTP
             try:
-                result = self._chat_http(all_messages)
-                yield result
+                yield self._chat_http(all_messages)
             except Exception as exc2:
                 yield f"❌ Error: {str(exc2)}"
 
@@ -258,7 +265,6 @@ class MistralClient:
                     except (json.JSONDecodeError, KeyError, IndexError):
                         continue
         except Exception:
-            # SSE failed — fall back to non-streaming single call
             yield self._chat_http(messages)
 
     # ------------------------------------------------------------------
@@ -277,9 +283,13 @@ class MistralClient:
             "Never hallucinate — only reference what you know from the provided context.",
         ]
         if df_info:
-            parts.append(f"\n## Dataset Context\n```json\n{json.dumps(df_info, indent=2, default=str)}\n```")
+            parts.append(
+                f"\n## Dataset Context\n```json\n{json.dumps(df_info, indent=2, default=str)}\n```"
+            )
         if model_info:
-            parts.append(f"\n## Model Context\n```json\n{json.dumps(model_info, indent=2, default=str)}\n```")
+            parts.append(
+                f"\n## Model Context\n```json\n{json.dumps(model_info, indent=2, default=str)}\n```"
+            )
         return "\n".join(parts)
 
     def generate_eda_summary(self, profile_dict: dict) -> str:
