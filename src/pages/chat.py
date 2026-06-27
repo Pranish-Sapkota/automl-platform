@@ -7,7 +7,7 @@ import streamlit as st
 
 from src.ai import MistralClient
 from src.components import page_header, section_header, info_box
-from src.storage import save_chat_message, get_chat_history
+from src.storage import save_chat_message
 from src.utils import get_logger
 
 logger = get_logger(__name__)
@@ -30,16 +30,26 @@ def render() -> None:
         "Ask questions about your dataset and model using Mistral AI.",
     )
 
-    # API key is loaded automatically from Streamlit secrets or environment variable.
-    # No manual entry needed — it is set securely in Streamlit Cloud secrets.
+    # MistralClient() with no args calls get_config() fresh, which reads
+    # st.secrets["MISTRAL_API_KEY"] at runtime — always available here.
     client = MistralClient()
 
     if not client.is_configured():
         info_box(
-            "Mistral API key is not configured. Please add <code>MISTRAL_API_KEY</code> "
-            "to your Streamlit Cloud secrets.",
+            "Mistral API key is not set. Add <code>MISTRAL_API_KEY</code> "
+            "to your Streamlit Cloud secrets (App settings → Secrets).",
             "warning",
         )
+        return   # nothing else to render until the key is set
+
+    # Show which model is active
+    st.markdown(
+        f'<div style="background:#1A1D2E;border:1px solid #2D3748;border-radius:8px;'
+        f'padding:0.5rem 1rem;margin-bottom:1rem;color:#94A3B8;font-size:0.8rem">'
+        f'🤖 Model: <b style="color:#6366F1">{client.model}</b> &nbsp;|&nbsp; '
+        f'🔑 API key: <b style="color:#10B981">✓ Loaded from secrets</b></div>',
+        unsafe_allow_html=True,
+    )
 
     # ── Context panel ──
     with st.expander("📋 Current Session Context", expanded=False):
@@ -58,14 +68,11 @@ def render() -> None:
     # ── Chat interface ──
     section_header("Chat", "", "💬")
 
-    # Initialise chat history in session
     if "chat_messages" not in st.session_state:
         st.session_state["chat_messages"] = []
 
-    # Display history
     _render_chat_history()
 
-    # Input
     pending = st.session_state.pop("pending_prompt", None)
     user_input = st.chat_input("Ask anything about your dataset or model…")
 
@@ -73,67 +80,58 @@ def render() -> None:
     if message_to_send:
         _handle_message(message_to_send, client)
 
-    # ── Actions ──
+    # ── Action buttons ──
     col1, col2, col3 = st.columns([1, 1, 4])
     with col1:
         if st.button("🗑️ Clear Chat"):
             st.session_state["chat_messages"] = []
             st.rerun()
-
     with col2:
-        if st.button("📊 Generate EDA Summary"):
+        if st.button("📊 EDA Summary"):
             _generate_eda_summary(client)
-
     with col3:
-        if st.button("💡 Generate Business Insights"):
+        if st.button("💡 Business Insights"):
             _generate_business_insights(client)
 
 
+# ------------------------------------------------------------------
+# Internal helpers
+# ------------------------------------------------------------------
+
 def _render_chat_history() -> None:
-    messages = st.session_state.get("chat_messages", [])
-    for msg in messages:
+    for msg in st.session_state.get("chat_messages", []):
         with st.chat_message(msg["role"], avatar="🤖" if msg["role"] == "assistant" else "👤"):
             st.markdown(msg["content"])
 
 
 def _handle_message(message: str, client: MistralClient) -> None:
-    # Add user message
     st.session_state["chat_messages"].append({"role": "user", "content": message})
 
-    # Build context
     system_prompt = client.build_system_prompt(
         df_info=_get_df_context(),
         model_info=_get_model_context(),
     )
 
-    # Get AI response
     with st.chat_message("assistant", avatar="🤖"):
-        response_placeholder = st.empty()
+        placeholder = st.empty()
         full_response = ""
-
         try:
-            if client.is_configured():
-                for chunk in client.stream_chat(
-                    messages=st.session_state["chat_messages"],
-                    system_prompt=system_prompt,
-                ):
-                    full_response += chunk
-                    response_placeholder.markdown(full_response + "▌")
-                response_placeholder.markdown(full_response)
-            else:
-                full_response = (
-                    "⚠️ **Mistral API key not set.** "
-                    "Please add `MISTRAL_API_KEY` to Streamlit Cloud secrets."
-                )
-                response_placeholder.markdown(full_response)
+            for chunk in client.stream_chat(
+                messages=st.session_state["chat_messages"],
+                system_prompt=system_prompt,
+            ):
+                full_response += chunk
+                placeholder.markdown(full_response + "▌")
+            placeholder.markdown(full_response)
         except Exception as exc:
             full_response = f"❌ Error: {str(exc)}"
-            response_placeholder.markdown(full_response)
+            placeholder.markdown(full_response)
             logger.error("Chat error: %s", exc)
 
-    st.session_state["chat_messages"].append({"role": "assistant", "content": full_response})
+    st.session_state["chat_messages"].append(
+        {"role": "assistant", "content": full_response}
+    )
 
-    # Persist to DB
     exp_id = st.session_state.get("experiment_id")
     save_chat_message(exp_id, "user", message)
     save_chat_message(exp_id, "assistant", full_response)
@@ -144,9 +142,8 @@ def _handle_message(message: str, client: MistralClient) -> None:
 def _generate_eda_summary(client: MistralClient) -> None:
     profile = st.session_state.get("profile")
     if not profile:
-        info_box("Run Data Profiling first to generate an EDA summary.", "warning")
+        info_box("Run Data Profiling first.", "warning")
         return
-
     profile_dict = {
         "shape": profile.shape,
         "problem_type": profile.problem_type,
@@ -157,35 +154,31 @@ def _generate_eda_summary(client: MistralClient) -> None:
         "categorical_columns": profile.categorical_columns[:10],
         "recommendations": profile.recommendations,
     }
-
     with st.spinner("Generating EDA summary…"):
         summary = client.generate_eda_summary(profile_dict)
-
-    msg = f"📊 **EDA Summary:**\n\n{summary}"
-    st.session_state["chat_messages"].append({"role": "assistant", "content": msg})
+    st.session_state["chat_messages"].append(
+        {"role": "assistant", "content": f"📊 **EDA Summary:**\n\n{summary}"}
+    )
     st.rerun()
 
 
 def _generate_business_insights(client: MistralClient) -> None:
     result = st.session_state.get("automl_result")
     if not result:
-        info_box("Train models first to generate business insights.", "warning")
+        info_box("Train models first.", "warning")
         return
-
     best = result.leaderboard[0]
     top_features = list(
         sorted(best.metrics.items(), key=lambda x: abs(x[1]), reverse=True)
     )[:5]
-
-    df_info = _get_df_context()
     with st.spinner("Generating business insights…"):
         insights = client.generate_business_insights(
-            df_info=df_info,
+            df_info=_get_df_context(),
             top_features=[str(f) for f in top_features],
         )
-
-    msg = f"💡 **Business Insights:**\n\n{insights}"
-    st.session_state["chat_messages"].append({"role": "assistant", "content": msg})
+    st.session_state["chat_messages"].append(
+        {"role": "assistant", "content": f"💡 **Business Insights:**\n\n{insights}"}
+    )
     st.rerun()
 
 
@@ -230,20 +223,12 @@ def _get_model_context() -> dict:
 
 
 def _show_context() -> None:
-    df_ctx = _get_df_context()
-    model_ctx = _get_model_context()
-
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("**Dataset Context**")
-        if df_ctx:
-            st.json(df_ctx)
-        else:
-            st.info("No dataset loaded.")
-
+        ctx = _get_df_context()
+        st.json(ctx) if ctx else st.info("No dataset loaded.")
     with col2:
         st.markdown("**Model Context**")
-        if model_ctx:
-            st.json(model_ctx)
-        else:
-            st.info("No model trained.")
+        ctx = _get_model_context()
+        st.json(ctx) if ctx else st.info("No model trained.")
