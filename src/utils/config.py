@@ -18,29 +18,25 @@ for d in [DATA_DIR, MODELS_DIR, REPORTS_DIR]:
 
 
 class MLConfig(BaseModel):
-    """ML training configuration."""
-    time_budget: int = Field(default=120, description="FLAML time budget in seconds")
-    max_iter: int = Field(default=50, description="Max FLAML iterations")
-    n_jobs: int = Field(default=-1, description="Parallel jobs")
-    cv_folds: int = Field(default=5, description="Cross-validation folds")
-    test_size: float = Field(default=0.2, description="Test split ratio")
-    random_state: int = Field(default=42, description="Random seed")
+    time_budget: int = Field(default=120)
+    max_iter: int = Field(default=50)
+    n_jobs: int = Field(default=-1)
+    cv_folds: int = Field(default=5)
+    test_size: float = Field(default=0.2)
+    random_state: int = Field(default=42)
     estimator_list: list[str] = Field(
-        default=["rf", "extra_tree", "xgboost", "lgbm", "catboost", "lrl1", "dt"],
-        description="Models to train"
+        default=["rf", "extra_tree", "xgboost", "lgbm", "catboost", "lrl1", "dt"]
     )
 
 
 class MistralConfig(BaseModel):
-    """Mistral AI configuration."""
-    model: str = Field(default="mistral-small-2506", description="Mistral model")
-    max_tokens: int = Field(default=2048, description="Max response tokens")
-    temperature: float = Field(default=0.3, description="Generation temperature")
-    api_key: Optional[str] = Field(default=None, description="API key")
+    model: str = Field(default="mistral-small-2506")
+    max_tokens: int = Field(default=2048)
+    temperature: float = Field(default=0.3)
+    api_key: Optional[str] = Field(default=None)
 
 
 class AppConfig(BaseModel):
-    """Application configuration."""
     app_name: str = "AutoML Platform"
     app_version: str = "1.0.0"
     debug: bool = False
@@ -56,33 +52,33 @@ class AppConfig(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
 
-def _load_api_key() -> Optional[str]:
+def _get_mistral_api_key() -> Optional[str]:
     """
-    Load Mistral API key with priority:
-      1. Streamlit secrets (st.secrets) — used on Streamlit Cloud
-      2. Environment variable MISTRAL_API_KEY — used locally
-    Returns None if neither is set.
+    Load API key at CALL TIME (not import time) so st.secrets is always ready.
+    Priority: Streamlit secrets → environment variable.
     """
-    # 1. Try Streamlit secrets first (safe — won't crash if secrets don't exist)
+    # 1. Streamlit secrets (Streamlit Cloud)
     try:
         import streamlit as st
-        key = st.secrets.get("MISTRAL_API_KEY")
+        key = st.secrets.get("MISTRAL_API_KEY", None)
         if key:
             return str(key)
     except Exception:
         pass
 
-    # 2. Fall back to environment variable
+    # 2. Environment variable (local dev)
     return os.environ.get("MISTRAL_API_KEY") or None
 
 
 def get_config() -> AppConfig:
-    """Get application configuration, reading API key from secrets/env."""
+    """Build config — always resolves secrets at runtime, not import time."""
     mistral_cfg = MistralConfig(
-        api_key=_load_api_key(),
+        api_key=_get_mistral_api_key(),
         model=os.environ.get("MISTRAL_MODEL", "mistral-small-2506"),
     )
     return AppConfig(mistral=mistral_cfg)
 
 
+# Module-level CONFIG is used for non-secret settings only.
+# MistralClient always calls get_config() fresh to pick up st.secrets.
 CONFIG: AppConfig = get_config()
