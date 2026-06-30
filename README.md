@@ -2,7 +2,7 @@
 
 # 🤖 AutoML Platform
 
-**A free, production-grade AutoML platform deployable on Streamlit Cloud with AI-powered insights, SHAP explainability, and Mistral chat.**
+**A free, production-grade AutoML platform deploy on Streamlit Cloud with AI-powered insights, SHAP explainability, and Mistral chat.**
 
 [![Live Demo](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://automl-platform.streamlit.app/)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://python.org)
